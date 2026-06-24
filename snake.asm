@@ -88,12 +88,14 @@ frameBuffer: .word 0 : 1024  # Frame buffer
 #   00 <= yy <= ff est la couleur verte en hexadÃ©cimal
 #   00 <= zz <= ff est la couleur bleue en hexadÃ©cimal
 
-colors: .word 0x00000000, 0x00ff0000, 0xff00ff00, 0x00396239, 0x00ff00ff
+colors: .word 0x00000000, 0x00ff0000, 0xff00ff00, 0x00396239, 0x00ff00ff, 0xffffff00, 0xff0000ff
 .eqv black 0
 .eqv red   4
 .eqv green 8
 .eqv greenV2  12
 .eqv rose  16
+.eqv jaune 20
+.eqv blue 24
 
 # DerniÃ¨re position connue de la queue du serpent.
 
@@ -474,7 +476,7 @@ obstaclesPosX: .word 0 : 1024  # CoordonnÃ©es X des obstacles
 obstaclesPosY: .word 0 : 1024  # CoordonnÃ©es Y des obstacles
 candy:         .word 0, 0      # Position du bonbon (X,Y)
 scoreJeu:      .word 0         # Score obtenu par le joueur
-motgentil: .asciiz "Vous êtes vraiment très mauvais ! \n"
+motgentil: .asciiz " : Vous ï¿½tes vraiment trï¿½s mauvais ! \n"
 .text
 
 
@@ -491,6 +493,7 @@ motgentil: .asciiz "Vous êtes vraiment très mauvais ! \n"
 ################################################################################
 
 majDirection:
+#Gestion de la pile
 subu $sp $sp 12
 sw $ra 0($sp)
 sw $a0 4($sp)
@@ -498,6 +501,7 @@ sw $t0 8($sp)
 
 lw $t0 snakeDir
 
+# Si c'est la mï¿½me direction ou direction interdite on sort
 beq $a0 4 Exit
 beq $a0 $t0 Exit
 
@@ -514,6 +518,8 @@ TestLegalTop:
 bne $t0 2 SetDirection
 j Exit
 
+
+# Regarde si on demande pas une direction interdite (opposï¿½)
 TestLegalBottom:
 bne $t0 0 SetDirection
 j Exit
@@ -526,6 +532,7 @@ TestLegalLeft:
 bne $t0 1 SetDirection
 j Exit
 
+# Sauvegarde la nouvelle position entrï¿½e par l'utilisateur
 SetDirection:
 sw $a0 snakeDir
 
@@ -565,27 +572,32 @@ sw $s2 48($sp)
 sw $s3 52($sp)
 
 
+# Charge la direction
 lw $t0 snakeDir
 
+# Charge les adresses des tableaux
 la $t1 snakePosX
 la $t2 snakePosY
 
 
-
+# Permet d'accï¿½der a la derniï¿½re adresse du tableau, un cran plus loin
 lw $t5 tailleSnake
 li $s1 4
 mul $t5 $t5 $s1
 add $t1 $t1 $t5
 add $t2 $t2 $t5
+
+# Charge la longeur qui jouera d'indice
 lw $t5 tailleSnake
 lw $t7 tailleSnake
 
+# Saute selon la direction
 beq $t0 0 BougeEnHaut
 beq $t0 1 BougeADroite
 beq $t0 2 BougeEnBas
 beq $t0 3 BougeAGauche
 
-
+# Decale tout le baleau X vers la droite
 BougeEnHaut:
 beq $t5 0 UpY
 subi $t1 $t1 4
@@ -595,6 +607,7 @@ sw $t6 0($t3)
 subi $t5 $t5 1
 j BougeEnHaut
 
+# Dï¿½cale tout le tableau Y vers la droite
 UpY:
 beq $t7 0 HeadUp
 subi $t2 $t2 4
@@ -605,15 +618,18 @@ subi $t7 $t7 1
 j UpY
 
 HeadUp: 
+# Ajoute ï¿½ la premiï¿½re position (tï¿½te), la nouvelle cordonï¿½e + 1 en X
 la $t1 snakePosX
 lw $t3 4($t1)
 addi $t3 $t3 1
 sw $t3 0($t1)
 
+# Ajoute ï¿½ la premiï¿½re position (tï¿½te), la nouvelle cordonï¿½e en Y qui est la mï¿½me que la prï¿½cï¿½dente
 la $t2 snakePosY
 lw $t3 4($t2)
 sw $t3 0($t2)
 
+# Accï¿½de au dernier ï¿½lï¿½ment en dehors du tableau, pour remettre ï¿½ 0 la cordonnï¿½e que l'on a dï¿½calï¿½ en dehors du tableau
 lw $t5 tailleSnake
 li $s1 4
 mul $t5 $t5 $s1
@@ -624,6 +640,7 @@ sw $s2 0($t1)
 sw $s2 0($t2)
 j TestCandy
 
+#Mï¿½me chose que celle en haut
 BougeEnBas:
 beq $t5 0 DownY
 subi $t1 $t1 4
@@ -663,6 +680,8 @@ sw $s2 0($t1)
 sw $s2 0($t2)
 j TestCandy
 
+
+# Mï¿½me chose que pour en bas et en haut
 BougeADroite:
 beq $t5 0 RightY
 subi $t2 $t2 4
@@ -681,6 +700,7 @@ sw $t6 0($t3)
 subi $t7 $t7 1
 j RightY
 
+# Mï¿½me chose sauf que lï¿½ c'est l'inverse, c'est en Y qu'on va augmenter + 1
 HeadRight: 
 la $t2 snakePosY
 lw $t3 4($t2)
@@ -701,6 +721,7 @@ sw $s2 0($t1)
 sw $s2 0($t2)
 j TestCandy
 
+# Mï¿½me chose que la droite
 BougeAGauche:
 beq $t5 0 LeftX
 subi $t2 $t2 4
@@ -771,6 +792,7 @@ la $t1 scoreJeu
 lw $t2 0($t1)
 addi $t2 $t2 1
 sw $t2 0($t1)
+
 #change la queue
 la $t1 snakePosX
 la $t2 snakePosY
@@ -786,6 +808,7 @@ lw $t2 0($t2)
 sw $t1 0($s3)
 sw $t2 4($s3)
 
+# Accï¿½de au dernier ï¿½lement un cran plus loin
 la $t1 snakePosX
 la $t2 snakePosY
 lw $t5 tailleSnake
@@ -801,7 +824,7 @@ beq $t0 1 CordoAddY
 beq $t0 2 CordoSubX
 beq $t0 3 CordoSubY
 
-
+#Mï¿½me chose que pour bouger le serpent
 CordoAddX:
 beq $t5 0 ChangeYAdd
 subi $t1 $t1 4
@@ -820,8 +843,9 @@ sw $t6 0($t3)
 subi $t7 $t7 1
 j ChangeYAdd
 
+
 AddX: 
-la $t1  snakePosX
+la $t1 snakePosX
 lw $t3 4($t1)
 addi $t3 $t3 1
 sw $t3 0($t1)
@@ -830,6 +854,7 @@ la $t2 snakePosY
 lw $t3 4($t2)
 sw $t3 0($t2)
 
+# On change la nouvelle queue
 lw $t5 tailleSnake
 li $s1 4
 mul $t5 $t5 $s1
@@ -839,11 +864,14 @@ lw $t1 0($t1)
 lw $t2 0($t2)
 sw $t1 0($s3)
 sw $t2 4($s3)
+lw $t5 tailleSnake
+addi $t5 $t5 1
+sw $t5 tailleSnake
 j MoveCandy
 
 
 
-
+#Mï¿½me chose
 CordoSubX:
 beq $t5 0 ChangeYSub
 subi $t1 $t1 4
@@ -892,6 +920,7 @@ j MoveCandy
 
 
 
+#Mï¿½me chose
 CordoAddY:
 beq $t5 0 ChangeXAdd
 subi $t2 $t2 4
@@ -935,6 +964,8 @@ addi $t5 $t5 1
 sw $t5 tailleSnake
 j MoveCandy
 
+
+#Mï¿½me chose
 CordoSubY:
 beq $t5 0 ChangeXSub
 subi $t2 $t2 4
@@ -975,31 +1006,36 @@ sw $t2 4($s3)
 lw $t5 tailleSnake
 addi $t5 $t5 1
 sw $t5 tailleSnake
-j Exi
+
+
 
 MoveCandy:
-jal newRandomObjectPosition # Génère des positions aléatoires pour le nouveau bonbon
+jal newRandomObjectPosition # Gï¿½nï¿½re des positions alï¿½atoires pour le nouveau bonbon
 sw $v0 candy #Sauvegarde la position en X du nouveau bonbon
 sw $v1 candy + 4 #Sauvegarde la position en Y du nouveau bonbon
 
 NewObstacle:
-lw $t1 numObstacles
-la $t2 obstaclesPosX
-la $t3 obstaclesPosY
+#Augmente le nombre d'obstacles
+lw $t0 numObstacles
+la $t1 obstaclesPosX
+la $t2 obstaclesPosY
 
 li $s1 4
-mul $t1 $t1 $s1
-add $t2 $t2 $t1
-add $t3 $t3 $t1
+mul $t0 $t0 $s1
+add $t1 $t1 $t0
+add $t2 $t2 $t0
 
 jal newRandomObjectPosition
-sw $v0 0($t2)
-sw $v1 0($t3)
+sw $v0 0($t1)
+sw $v1 0($t2)
 
-#Augmente le nombre d'obstacles
 lw $t1 numObstacles
 addi $t1 $t1 1
 sw $t1 numObstacles
+jal resetAffichage
+jal printGame
+
+
 
 Exi:
 lw $ra 0($sp)
@@ -1027,9 +1063,103 @@ jr $ra
 conditionFinJeu:
 
 # Aide: Remplacer cette instruction permet d'avancer dans le projet.
-li $v0 1
+li $v0 0
+li $t1 0
+li $t2 15
 
+# Chargement des positions x et y
+la $s1 snakePosX
+la $s2 snakePosY
+
+# Rï¿½cupere la tï¿½te du serpent
+lw $s3 0($s1) 
+lw $s4 0($s2) 
+
+# Comparaisons pour savoir si le serpent dï¿½passe la limite
+
+blt $s3 $t1 V0  #s'il dï¿½passe ï¿½ gauche
+bgt $s4 $t2 V0 #s'il dï¿½passe en haut
+bgt $s3 $t2 V0  #s'il dï¿½passe ï¿½ droite
+blt $s4 $t1 V0  #s'il depassen en bas
+
+
+
+la $t0 obstaclesPosX
+la $t1 obstaclesPosY
+
+lw $t2 0($t0)
+lw $t3 0($t1)
+
+li $t4 0
+li $t5 0
+lw $t6 numObstacles
+
+#Test si on sort pas du tableau, et si c'est le cas on test ensuite si le serpent se mange lui mï¿½me, sinon on test en Y si ï¿½a correspond
+TestObstacleX:
+beq $t4 $t6 Suite
+beq $s3 $t2 TestObstacleY
+addi $t0 $t0 4
+lw $t2 0($t0)
+addi $t4 $t4 1
+j TestObstacleX
+
+#Test si on sort pas du tableau, et si c'est le cas on test ensuite si le serpent se mange lui mï¿½me, sinon on saute ï¿½ V0 qui fait la fin du jeu
+TestObstacleY:
+beq $t5 $t6 Suite
+beq $s4 $t3 V0
+addi $t1 $t1 4
+lw $t3 0($t1)
+addi $t5 $t5 1
+j TestObstacleY
+
+
+Suite:
+la $s1 snakePosX
+la $s2 snakePosY
+
+# Rï¿½cupere la tï¿½te du serpent
+lw $s3 0($s1) 
+lw $s4 0($s2) 
+
+#Corps du serpent
+addi $s1 $s1 4
+addi $s2 $s2 4
+lw $t1 0($s1)
+lw $t2 0($s2)
+
+li $t4 1
+li $t5 1
+lw $t6 tailleSnake
+
+#Mï¿½me principe que pour les obstacles
+TestEatLuiMemeX:
+beq $t4 $t6 Fin
+beq $s3 $t1 TestEatLuiMemeY
+addi $s1 $s1 4
+lw $t1 0($s1)
+addi $t4 $t4 1
+j TestEatLuiMemeX
+
+TestEatLuiMemeY:
+beq $t5 $t6 Fin
+beq $s4 $t2 V0
+addi $s2 $s2 4
+lw $t2 0($s2)
+addi $t5 $t5 1
+j TestEatLuiMemeY
+
+V0:
+li $v0 5
+jal resetAffichage
+j affichageFinJeu
+
+
+
+
+
+Fin:
 jr $ra
+
 
 ############################### affichageFinJeu ################################
 # ParamÃ¨tres: Aucun
@@ -1039,16 +1169,66 @@ jr $ra
 # Bonus: Afficher le score en surimpression du jeu.
 ################################################################################
 
-affichageFinJeu:
 
+affichageFinJeu:
+# Affiche le score dans la console
 la $t1 scoreJeu
 lw $a0 0($t1)
 li $v0 1
 syscall
 
+# Affiche le mot dans la console
 la $a0 motgentil
 li $v0 4
 syscall
+
+# Affichage le smiley
+lw $a0 colors + jaune
+li $a1 4
+li $a2 5
+jal printColorAtPosition
+li $a1 4
+li $a2 10
+
+jal printColorAtPosition
+li $a1 12
+li $a2 4
+jal printColorAtPosition
+li $a1 11
+li $a2 5
+
+jal printColorAtPosition
+li $a1 10
+li $a2 6
+jal printColorAtPosition
+li $a1 10
+li $a2 7
+jal printColorAtPosition
+li $a1 10
+li $a2 8
+jal printColorAtPosition
+li $a1 10
+li $a2 9
+jal printColorAtPosition
+
+li $a1 11
+li $a2 10
+jal printColorAtPosition
+li $a1 12
+li $a2 11
+jal printColorAtPosition
+
+
+lw $a0 colors + blue
+li $a1 7
+li $a2 10
+jal printColorAtPosition
+li $a1 8
+li $a2 11
+jal printColorAtPosition
+
+
+
 
 # Fin.
 
